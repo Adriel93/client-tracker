@@ -1,61 +1,71 @@
-# Configuración de Client Tracker en Vercel
+# Configuración de Client Tracker en Vercel con SQLite
 
-## 🚀 Pasos para desplegar con persistencia
+## 🚀 Despliegue con SQLite (Persistencia Local)
 
-### 1. Configurar Supabase (Base de datos PostgreSQL gratuita)
+### ¿Cómo funciona SQLite en Vercel?
 
-1. Ve a [supabase.com](https://supabase.com)
-2. Haz clic en **"Start your project"**
-3. Crea una cuenta o inicia sesión
-4. Crea un nuevo proyecto:
-   - **Name**: `client-tracker`
-   - **Database Password**: Guarda esta contraseña
-   - **Region**: Elige la más cercana
-5. Espera a que se provisione (2-3 min)
-6. Copia tu **Connection String** desde:
-   - Settings → Database → Connection String (URI)
-   - Reemplaza `[YOUR-PASSWORD]` con tu contraseña
+**Importante**: Vercel es serverless, por lo que **SQLite no persiste datos entre deployments**. Los datos se pierden cada vez que se redeploya.
 
-### 2. Desplegar en Vercel
+### Soluciones para persistencia:
+
+#### Opción 1: SQLite con Vercel (Datos temporales)
+- ✅ Fácil de configurar
+- ✅ No requiere servicios externos
+- ❌ Datos se pierden en cada redeploy
+- ❌ No funciona entre múltiples instancias
+
+#### Opción 2: PostgreSQL con Supabase (Recomendado)
+- ✅ Datos persisten permanentemente
+- ✅ Funciona en múltiples dispositivos
+- ✅ Gratuito (hasta ciertos límites)
+- ❌ Requiere configuración adicional
+
+### Para mantener SQLite en Vercel:
+
+1. **No necesitas variables de entorno** (DATABASE_URL)
+2. **Los datos duran mientras la instancia esté viva**
+3. **Para desarrollo/testing**: Perfecto
+4. **Para producción**: Considera migrar a PostgreSQL
+
+### Despliegue en Vercel
 
 1. Ve a [vercel.com](https://vercel.com)
 2. Importa tu repositorio de GitHub
-3. En **Environment Variables**, agrega:
-   - **Name**: `DATABASE_URL`
-   - **Value**: Tu connection string de Supabase (pegado arriba)
+3. **No agregues variables de entorno** (usa SQLite por defecto)
 4. Haz clic en **Deploy**
 
-### 3. Configurar variable de entorno local
+### Configuración local
 
-Crea un archivo `.env.local` en la raíz del proyecto:
+Para desarrollo local con SQLite:
 
-```bash
-DATABASE_URL=postgresql://postgres:TU_PASSWORD@db.supabase.co:5432/postgres?sslmode=require
-```
-
-Luego ejecuta:
 ```bash
 npm install
 npm run dev
 ```
 
-## 🔍 Verificar que funciona
+### ⚠️ Limitaciones en Vercel
 
-1. Abre la app en Vercel (o localhost:3000 localmente)
-2. Crea un cliente, actividad, pendiente
-3. Actualiza la página (F5)
-4. **Importante**: Los datos deben persistir ✅
+- **Cold starts**: La BD se recrea cada vez que la función se "despierta"
+- **Múltiples instancias**: Cada instancia tiene su propia BD
+- **Timeout**: Las funciones serverless tienen límite de tiempo
 
-## 📝 Notas
+### 🔄 Si quieres persistencia real
 
-- La BD está en Supabase, no en el servidor local
-- Todos los cambios se guardan automáticamente
-- Funciona en cualquier dispositivo/navegador
-- Es totalmente gratuito (plan free de Supabase)
+Para datos que persistan, ejecuta:
 
-## 🆘 Si no funciona
+```bash
+# Instalar PostgreSQL client
+npm uninstall sqlite3
+npm install pg
 
-- Verifica que `DATABASE_URL` esté configurada en Vercel
-- Revisa los logs de Vercel en el dashboard
-- Confirma que las tablas PostgreSQL se crearon en Supabase
+# Luego configura Supabase según VERCEL_DEPLOYMENT.md
+```
 
+### 🧪 Testing
+
+1. Despliega en Vercel
+2. Crea datos en la app
+3. **No hagas redeploy** (mantén la instancia viva)
+4. Los datos deberían persistir mientras no se redeploye
+
+¿Necesitas migrar a PostgreSQL para persistencia real?
