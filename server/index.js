@@ -1,19 +1,31 @@
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(express.json());
 
+// Debug logging
+console.log('Environment variables:');
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_PORT:', process.env.DB_PORT);
+console.log('DB_NAME:', process.env.DB_NAME);
+console.log('DB_USER:', process.env.DB_USER);
+console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '***SET***' : 'NOT SET');
+
 const pool = new Pool({
-  host: process.env.DB_HOST || 'db.gwxaugdghuybobojrwxo.supabase.co',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'postgres',
-  user: process.env.DB_USER || 'postgres',
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT) || 5432,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
+  max: 1, // Para serverless
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 async function createTables() {
@@ -62,29 +74,48 @@ async function createTables() {
 createTables();
 
 app.get('/api/data', async (req, res) => {
+  console.log('GET /api/data called');
   try {
     const clients = await pool.query('SELECT * FROM clients');
     const activities = await pool.query('SELECT * FROM activities');
     const pending = await pool.query('SELECT * FROM pending');
     const psa = await pool.query('SELECT * FROM psa');
 
-    res.json({
+    const data = {
       clients: clients.rows,
       activities: activities.rows,
       pending: pending.rows,
       psa: psa.rows
+    };
+
+    console.log('Data retrieved:', {
+      clients: data.clients.length,
+      activities: data.activities.length,
+      pending: data.pending.length,
+      psa: data.psa.length
     });
+
+    res.json(data);
   } catch (err) {
+    console.error('Error in GET /api/data:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.post('/api/data', async (req, res) => {
+  console.log('POST /api/data called');
   const payload = req.body || {};
   const clients = Array.isArray(payload.clients) ? payload.clients : [];
   const activities = Array.isArray(payload.activities) ? payload.activities : [];
   const pending = Array.isArray(payload.pendingItems) ? payload.pendingItems : [];
   const psa = Array.isArray(payload.psaItems) ? payload.psaItems : [];
+
+  console.log('Data to save:', {
+    clients: clients.length,
+    activities: activities.length,
+    pending: pending.length,
+    psa: psa.length
+  });
 
   const client = await pool.connect();
   try {
@@ -112,9 +143,11 @@ app.post('/api/data', async (req, res) => {
     }
 
     await client.query('COMMIT');
+    console.log('Data saved successfully');
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
+    console.error('Error in POST /api/data:', err);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
