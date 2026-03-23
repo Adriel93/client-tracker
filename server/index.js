@@ -8,8 +8,12 @@ const PORT = process.env.PORT || 4000;
 app.use(express.json());
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // For Supabase
+  host: process.env.DB_HOST || 'db.gwxaugdghuybobojrwxo.supabase.co',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'postgres',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD,
+  ssl: { rejectUnauthorized: false }
 });
 
 async function createTables() {
