@@ -1,97 +1,161 @@
 const express = require('express');
-const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
-const fs = require('fs');
+const { Client } = require('pg');
 
-const DB_FILE = path.join(__dirname, 'client-tracker.db');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(express.json());
-
-function createDb() {
-  const exists = fs.existsSync(DB_FILE);
-  const db = new sqlite3.Database(DB_FILE);
-
-  if (!exists) {
-    db.serialize(() => {
-      db.run(`CREATE TABLE clients (id TEXT PRIMARY KEY, name TEXT NOT NULL, company TEXT, notes TEXT, createdAt TEXT)`);
-      db.run(`CREATE TABLE activities (id TEXT PRIMARY KEY, clientId TEXT, text TEXT, date TEXT, createdAt TEXT)`);
-      db.run(`CREATE TABLE pending (id TEXT PRIMARY KEY, clientId TEXT, text TEXT, done INTEGER, createdAt TEXT)`);
-      db.run(`CREATE TABLE psa (id TEXT PRIMARY KEY, clientId TEXT, text TEXT, createdAt TEXT)`);
-    });
-  }
-
-  return db;
-}
-
-const db = createDb();
-
-app.get('/api/data', (req, res) => {
-  const data = { clients: [], activities: [], pending: [], psa: [] };
-
-  db.serialize(() => {
-    db.all('SELECT * FROM clients', [], (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      data.clients = rows;
-
-      db.all('SELECT * FROM activities', [], (err2, rows2) => {
-        if (err2) return res.status(500).json({ error: err2.message });
-        data.activities = rows2;
-
-        db.all('SELECT * FROM pending', [], (err3, rows3) => {
-          if (err3) return res.status(500).json({ error: err3.message });
-          data.pending = rows3;
-
-          db.all('SELECT * FROM psa', [], (err4, rows4) => {
-            if (err4) return res.status(500).json({ error: err4.message });
-            data.psa = rows4;
-            res.json(data);
-          });
-        });
-      });
-    });
-  });
+const db = new Client({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
-app.post('/api/data', (req, res) => {
-  const payload = req.body || {};
-  const clients = Array.isArray(payload.clients) ? payload.clients : [];
-  const activities = Array.isArray(payload.activities) ? payload.activities : [];
-  const pending = Array.isArray(payload.pendingItems) ? payload.pendingItems : [];
-  const psa = Array.isArray(payload.psaItems) ? payload.psaItems : [];
+// Connect to database
+db.connect().catch(err => {
+  console.error('DB connection error:', err);
+  process.exit(1);
+});
 
-  db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
+// Initialize tables on startup
+async function initDb() {
+  try {
+    await db.query(`CREATE TABLE IF NOT EXISTS clients (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      company TEXT,
+      notes TEXT,
+      created_at TEXT
+    )`);
 
-    db.run('DELETE FROM clients');
-    db.run('DELETE FROM activities');
-    db.run('DELETE FROM pending');
-    db.run('DELETE FROM psa');
+    await db.query(`CREATE TABLE IF NOT EXISTS activities (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      date TEXT NOT NULL,
+      created_at TEXT,
+      FOREIGN KEY (client_id) REFERENCES clients(id)
+    )`);
 
-    const insertClient = db.prepare('INSERT INTO clients (id,name,company,notes,createdAt) VALUES (?,?,?,?,?)');
-    clients.forEach(c => insertClient.run(c.id, c.name, c.company || '', c.notes || '', c.createdAt || new Date().toISOString()));
-    insertClient.finalize();
+    await db.query(`CREATE TABLE IF NOT EXISTS pending (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      done BOOLEAN DEFAULT false,
+      created_at TEXT,
+      FOREIGN KEY (client_id) REFERENCES clients(id)
+    )`);
 
-    const insertActivity = db.prepare('INSERT INTO activities (id,clientId,text,date,createdAt) VALUES (?,?,?,?,?)');
-    activities.forEach(a => insertActivity.run(a.id, a.clientId, a.text, a.date, a.createdAt));
-    insertActivity.finalize();
+    await db.query(`CREATE TABLE IF NOT EXISTS psa (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      created_at TEXT,
+      FOREIGN KEY (client_id) REFERENCES clients(id)
+    )`);
 
-    const insertPending = db.prepare('INSERT INTO pending (id,clientId,text,done,createdAt) VALUES (?,?,?,?,?)');
-    pending.forEach(p => insertPending.run(p.id, p.clientId, p.text, p.done ? 1 : 0, p.createdAt));
-    insertPending.finalize();
+    console.log('✅ Database tables initialized');
+  } catch (err) {
+    console.error('Error initializing tables:', err);
+  }
+}
 
-    const insertPsa = db.prepare('INSERT INTO psa (id,clientId,text,createdAt) VALUES (?,?,?,?)');
-    psa.forEach(p => insertPsa.run(p.id, p.clientId, p.text, p.createdAt));
-    insertPsa.finalize();
+app.use(express.json());
 
-    db.run('COMMIT', commitErr => {
-      if (commitErr) return res.status(500).json({ error: commitErr.message });
-      res.json({ success: true });
+// Get all data
+app.get('/api/data', async (req, res) => {
+  try {
+    const clientsRes = await db.query('SELECT * FROM clients ORDER BY created_at DESC');
+    const activitiesRes = await db.query('SELECT * FROM activities ORDER BY date ASC');
+    const pendingRes = await db.query('SELECT * FROM pending ORDER BY created_at DESC');
+    const psaRes = await db.query('SELECT * FROM psa ORDER BY created_at DESC');
+
+    const mapResults = (rows) => rows.map(r => ({
+      id: r.id,
+      clientId: r.client_id || r.clientId,
+      text: r.text,
+      date: r.date,
+      name: r.name,
+      company: r.company,
+      notes: r.notes,
+      done: r.done,
+      createdAt: r.created_at || r.createdAt
+    }));
+
+    res.json({
+      clients: mapResults(clientsRes.rows),
+      activities: mapResults(activitiesRes.rows),
+      pending: mapResults(pendingRes.rows),
+      psa: mapResults(psaRes.rows)
     });
-  });
+  } catch (err) {
+    console.error('Error fetching data:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Save all data (sync)
+app.post('/api/data', async (req, res) => {
+  const client = await db.connect().catch(() => db);
+  try {
+    await db.query('BEGIN');
+
+    const { clients = [], activities = [], pendingItems = [], psaItems = [] } = req.body;
+
+    // Clear existing data
+    await db.query('DELETE FROM psa');
+    await db.query('DELETE FROM pending');
+    await db.query('DELETE FROM activities');
+    await db.query('DELETE FROM clients');
+
+    // Insert clients
+    for (const c of clients) {
+      await db.query(
+        'INSERT INTO clients (id, name, company, notes, created_at) VALUES ($1, $2, $3, $4, $5)',
+        [c.id, c.name, c.company || '', c.notes || '', c.createdAt || new Date().toISOString()]
+      );
+    }
+
+    // Insert activities
+    for (const a of activities) {
+      await db.query(
+        'INSERT INTO activities (id, client_id, text, date, created_at) VALUES ($1, $2, $3, $4, $5)',
+        [a.id, a.clientId, a.text, a.date, a.createdAt]
+      );
+    }
+
+    // Insert pending
+    for (const p of pendingItems) {
+      await db.query(
+        'INSERT INTO pending (id, client_id, text, done, created_at) VALUES ($1, $2, $3, $4, $5)',
+        [p.id, p.clientId, p.text, p.done || false, p.createdAt]
+      );
+    }
+
+    // Insert PSA
+    for (const p of psaItems) {
+      await db.query(
+        'INSERT INTO psa (id, client_id, text, created_at) VALUES ($1, $2, $3, $4)',
+        [p.id, p.clientId, p.text, p.createdAt]
+      );
+    }
+
+    await db.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await db.query('ROLLBACK').catch(() => {});
+    console.error('Error saving data:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`API server listening on http://localhost:${PORT}`);
+  initDb().then(() => {
+    console.log(`🚀 API server listening on http://localhost:${PORT}`);
+  });
 });
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  await db.end();
+  process.exit(0);
+});
+

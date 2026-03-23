@@ -29,9 +29,6 @@ build/
 ehthumbs.db
 Thumbs.db
 
-# Database files (optional - uncomment if you want to exclude)
-# server/client-tracker.db
-
 # Logs
 logs
 *.log
