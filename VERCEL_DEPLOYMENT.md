@@ -23,8 +23,12 @@
 En tu proyecto de Vercel:
 
 1. Ve a **Settings** > **Environment Variables**
-2. Agrega:
-   - `DATABASE_URL`: `postgresql://postgres:TU_PASSWORD@db.TU_PROYECTO.supabase.co:5432/postgres?sslmode=require`
+2. Agrega estas variables:
+   - `DB_HOST`: `db.gwxaugdghuybobojrwxo.supabase.co`
+   - `DB_PORT`: `5432`
+   - `DB_NAME`: `postgres`
+   - `DB_USER`: `postgres`
+   - `DB_PASSWORD`: `LjZ16]IL02e^` (tu contraseña real de Supabase)
 
 ### Despliegue en Vercel
 
