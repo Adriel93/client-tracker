@@ -1,6 +1,16 @@
 {
+  "functions": {
+    "api/data.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/debug.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/test-connection.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }
