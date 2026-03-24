@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-require('dotenv').config();
 
 const pool = new Pool({
   host: process.env.DB_HOST,
@@ -7,53 +6,74 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: false },
   max: 1,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
 
+console.log('[DB POOL CONFIG]', {
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  passwordSet: !!process.env.DB_PASSWORD,
+  passwordLength: process.env.DB_PASSWORD?.length,
+});
+
+pool.on('error', (err) => {
+  console.error('[DB POOL ERROR]', err.message, err.code);
+});
+
 async function createTables() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS clients (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      company TEXT,
-      notes TEXT,
-      "createdAt" TEXT
-    )
-  `);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS activities (
-      id TEXT PRIMARY KEY,
-      "clientId" TEXT,
-      text TEXT,
-      date TEXT,
-      "createdAt" TEXT
-    )
-  `);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS pending (
-      id TEXT PRIMARY KEY,
-      "clientId" TEXT,
-      text TEXT,
-      done BOOLEAN,
-      "createdAt" TEXT
-    )
-  `);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS psa (
-      id TEXT PRIMARY KEY,
-      "clientId" TEXT,
-      text TEXT,
-      "createdAt" TEXT
-    )
-  `);
+  console.log('[CREATE TABLES] Starting...');
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        company TEXT,
+        notes TEXT,
+        "createdAt" TEXT
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS activities (
+        id TEXT PRIMARY KEY,
+        "clientId" TEXT,
+        text TEXT,
+        date TEXT,
+        "createdAt" TEXT
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS pending (
+        id TEXT PRIMARY KEY,
+        "clientId" TEXT,
+        text TEXT,
+        done BOOLEAN,
+        "createdAt" TEXT
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS psa (
+        id TEXT PRIMARY KEY,
+        "clientId" TEXT,
+        text TEXT,
+        "createdAt" TEXT
+      )
+    `);
+    console.log('[CREATE TABLES] Success');
+  } catch (err) {
+    console.error('[CREATE TABLES] Error:', err.message, err.code);
+  }
 }
 
 async function handler(req, res) {
+  console.log(`[${req.method}] /api/data - START`);
+  
   if (!process.env.DB_HOST || !process.env.DB_PASSWORD) {
-    console.error('Missing DB env vars', {
+    console.error('[HANDLER] Missing DB env vars', {
       DB_HOST: process.env.DB_HOST,
       DB_USER: process.env.DB_USER,
       DB_NAME: process.env.DB_NAME,
@@ -64,13 +84,25 @@ async function handler(req, res) {
   }
 
   try {
+    console.log('[HANDLER] Creating tables...');
     await createTables();
 
     if (req.method === 'GET') {
+      console.log('[GET] Querying clients...');
       const clients = await pool.query('SELECT * FROM clients');
+      console.log('[GET] Querying activities...');
       const activities = await pool.query('SELECT * FROM activities');
+      console.log('[GET] Querying pending...');
       const pending = await pool.query('SELECT * FROM pending');
+      console.log('[GET] Querying psa...');
       const psa = await pool.query('SELECT * FROM psa');
+
+      console.log('[GET] Success', {
+        clients: clients.rows.length,
+        activities: activities.rows.length,
+        pending: pending.rows.length,
+        psa: psa.rows.length,
+      });
 
       return res.status(200).json({
         clients: clients.rows,
@@ -86,6 +118,8 @@ async function handler(req, res) {
       const activities = Array.isArray(payload.activities) ? payload.activities : [];
       const pending = Array.isArray(payload.pendingItems) ? payload.pendingItems : [];
       const psa = Array.isArray(payload.psaItems) ? payload.psaItems : [];
+
+      console.log('[POST] Data to save:', { clients: clients.length, activities: activities.length, pending: pending.length, psa: psa.length });
 
       const client = await pool.connect();
       try {
@@ -136,10 +170,11 @@ async function handler(req, res) {
         }
 
         await client.query('COMMIT');
+        console.log('[POST] Success');
         return res.status(200).json({ success: true });
       } catch (err) {
         await client.query('ROLLBACK');
-        console.error('POST /api/data rollback error', err);
+        console.error('[POST] Error during transaction:', err.message, err.code);
         return res.status(500).json({ error: err.message });
       } finally {
         client.release();
@@ -149,8 +184,8 @@ async function handler(req, res) {
     res.setHeader('Allow', ['GET', 'POST']);
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   } catch (err) {
-    console.error('API /api/data error', err);
-    return res.status(500).json({ error: err.message });
+    console.error(`[${req.method}] /api/data - ERROR:`, err.message, err.code, err.syscall);
+    return res.status(500).json({ error: err.message, code: err.code });
   }
 }
 
