@@ -8,5 +8,6 @@ export default function handler(req, res) {
     DB_PASSWORD_LENGTH: process.env.DB_PASSWORD ? process.env.DB_PASSWORD.length : 0,
     NODE_ENV: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
+    connection_string_preview: `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD ? '***' : 'NOT_SET'}@${process.env.DB_HOST}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME}`,
   });
 }
