@@ -3,6 +3,8 @@ import './index.css';
 import Sidebar from './components/Sidebar';
 import ClientView from './components/ClientView';
 import AddClientModal from './components/AddClientModal';
+import Login from './components/Login';
+import { supabase } from './supabaseClient';
 
 const defaultData = {
   clients: [],
@@ -46,6 +48,7 @@ function makeSyncPayload(currentData) {
 export default function App() {
   const [data, setData] = useState(defaultData);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     async function loadData() {
@@ -68,6 +71,21 @@ export default function App() {
     }
 
     loadData();
+
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    checkUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -251,6 +269,14 @@ export default function App() {
     }));
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (!user) {
+    return <Login onLogin={setUser} />;
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
       <Sidebar
@@ -261,6 +287,7 @@ export default function App() {
         onSelectClient={(id) => { setSelectedClientId(id); setActiveTab('activities'); }}
         onAddClient={() => setShowAddClient(true)}
         onDeleteClient={deleteClient}
+        onLogout={handleLogout}
       />
 
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>

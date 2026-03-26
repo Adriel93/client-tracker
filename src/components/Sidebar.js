@@ -11,7 +11,7 @@ function getColor(id) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export default function Sidebar({ clients, activities, pendingItems, selectedClientId, onSelectClient, onAddClient, onDeleteClient }) {
+export default function Sidebar({ clients, activities, pendingItems, selectedClientId, onSelectClient, onAddClient, onDeleteClient, onLogout }) {
   return (
     <aside style={{
       width: 'var(--sidebar)', minWidth: 'var(--sidebar)',
@@ -28,19 +28,34 @@ export default function Sidebar({ clients, activities, pendingItems, selectedCli
               {clients.length} {clients.length === 1 ? 'cliente' : 'clientes'}
             </p>
           </div>
-          <button
-            onClick={onAddClient}
-            title="Agregar cliente"
-            style={{
-              width: 32, height: 32, borderRadius: 'var(--radius-sm)',
-              background: 'var(--accent)', border: 'none',
-              color: '#fff', fontSize: '1.2rem', display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            +
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={onAddClient}
+              title="Agregar cliente"
+              style={{
+                width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                background: 'var(--accent)', border: 'none',
+                color: '#fff', fontSize: '1.2rem', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              +
+            </button>
+            <button
+              onClick={onLogout}
+              title="Cerrar sesión"
+              style={{
+                width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                background: 'var(--bg3)', border: '1px solid var(--border)',
+                color: 'var(--text3)', fontSize: '0.8rem', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              ↗
+            </button>
+          </div>
         </div>
       </div>
 
