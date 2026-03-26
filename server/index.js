@@ -24,12 +24,14 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   ssl: { rejectUnauthorized: false },
   max: 1, // Para serverless
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  idleTimeoutMillis: 60000, // Increased to 1 minute
+  connectionTimeoutMillis: 20000, // Increased to 20 seconds
+  acquireTimeoutMillis: 20000, // Increased to 20 seconds
 });
 
 async function createTables() {
   try {
+    console.log('Creating clients table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS clients (
         id TEXT PRIMARY KEY,
@@ -39,6 +41,9 @@ async function createTables() {
         "createdAt" TEXT
       )
     `);
+    console.log('Clients table created or already exists');
+
+    console.log('Creating activities table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS activities (
         id TEXT PRIMARY KEY,
@@ -48,6 +53,9 @@ async function createTables() {
         "createdAt" TEXT
       )
     `);
+    console.log('Activities table created or already exists');
+
+    console.log('Creating pending table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS pending (
         id TEXT PRIMARY KEY,
@@ -57,6 +65,9 @@ async function createTables() {
         "createdAt" TEXT
       )
     `);
+    console.log('Pending table created or already exists');
+
+    console.log('Creating psa table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS psa (
         id TEXT PRIMARY KEY,
@@ -65,21 +76,52 @@ async function createTables() {
         "createdAt" TEXT
       )
     `);
-    console.log('Tables created or already exist');
+    console.log('PSA table created or already exists');
+
+    console.log('All tables created successfully');
   } catch (err) {
     console.error('Error creating tables:', err);
+    console.error('Error details:', err.message);
+    console.error('Error stack:', err.stack);
+    // Don't throw the error, just log it
+    // throw err;
   }
 }
 
-createTables();
+async function startServer() {
+  try {
+    await createTables();
+    app.listen(PORT, () => {
+      console.log(`🚀 API server listening on http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+}
+
+app.get('/test', (req, res) => {
+  res.json({ message: 'Server is working' });
+});
 
 app.get('/api/data', async (req, res) => {
   console.log('GET /api/data called');
   try {
+    console.log('Attempting to query clients table...');
     const clients = await pool.query('SELECT * FROM clients');
+    console.log('Clients query successful, rows:', clients.rows.length);
+    
+    console.log('Attempting to query activities table...');
     const activities = await pool.query('SELECT * FROM activities');
+    console.log('Activities query successful, rows:', activities.rows.length);
+    
+    console.log('Attempting to query pending table...');
     const pending = await pool.query('SELECT * FROM pending');
+    console.log('Pending query successful, rows:', pending.rows.length);
+    
+    console.log('Attempting to query psa table...');
     const psa = await pool.query('SELECT * FROM psa');
+    console.log('PSA query successful, rows:', psa.rows.length);
 
     const data = {
       clients: clients.rows,
@@ -98,63 +140,26 @@ app.get('/api/data', async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Error in GET /api/data:', err);
-    res.status(500).json({ error: err.message });
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
-app.post('/api/data', async (req, res) => {
-  console.log('POST /api/data called');
-  const payload = req.body || {};
-  const clients = Array.isArray(payload.clients) ? payload.clients : [];
-  const activities = Array.isArray(payload.activities) ? payload.activities : [];
-  const pending = Array.isArray(payload.pendingItems) ? payload.pendingItems : [];
-  const psa = Array.isArray(payload.psaItems) ? payload.psaItems : [];
-
-  console.log('Data to save:', {
-    clients: clients.length,
-    activities: activities.length,
-    pending: pending.length,
-    psa: psa.length
-  });
-
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    await client.query('DELETE FROM clients');
-    await client.query('DELETE FROM activities');
-    await client.query('DELETE FROM pending');
-    await client.query('DELETE FROM psa');
-
-    for (const c of clients) {
-      await client.query('INSERT INTO clients (id, name, company, notes, "createdAt") VALUES ($1, $2, $3, $4, $5)', [c.id, c.name, c.company || '', c.notes || '', c.createdAt || new Date().toISOString()]);
-    }
-
-    for (const a of activities) {
-      await client.query('INSERT INTO activities (id, "clientId", text, date, "createdAt") VALUES ($1, $2, $3, $4, $5)', [a.id, a.clientId, a.text, a.date, a.createdAt]);
-    }
-
-    for (const p of pending) {
-      await client.query('INSERT INTO pending (id, "clientId", text, done, "createdAt") VALUES ($1, $2, $3, $4, $5)', [p.id, p.clientId, p.text, p.done, p.createdAt]);
-    }
-
-    for (const p of psa) {
-      await client.query('INSERT INTO psa (id, "clientId", text, "createdAt") VALUES ($1, $2, $3, $4)', [p.id, p.clientId, p.text, p.createdAt]);
-    }
-
-    await client.query('COMMIT');
-    console.log('Data saved successfully');
-    res.json({ success: true });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error in POST /api/data:', err);
-    res.status(500).json({ error: err.message });
-  } finally {
-    client.release();
-  }
+// Global error handler
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 API server listening on http://localhost:${PORT}`);
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
+
+startServer();
+
+// Keep the event loop alive
+setInterval(() => {
+  // Do nothing, just keep the process alive
+}, 1000);
 
