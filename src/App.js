@@ -112,6 +112,13 @@ export default function App() {
     setShowAddClient(false);
   };
 
+  const updateClient = (clientId, changes) => {
+    setData(prev => ({
+      ...prev,
+      clients: prev.clients.map(c => c.id === clientId ? { ...c, ...changes } : c),
+    }));
+  };
+
   const deleteClient = (clientId) => {
     setData(prev => {
       const { [clientId]: _a, ...restActivities } = prev.activities;
@@ -265,6 +272,8 @@ export default function App() {
             psaItems={clientPsa}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            onUpdateClient={(changes) => updateClient(selectedClientId, changes)}
+            onDeleteClient={() => deleteClient(selectedClientId)}
             onAddActivity={(text, date) => addActivity(selectedClientId, text, date)}
             onUpdateActivity={(id, changes) => updateActivity(selectedClientId, id, changes)}
             onDeleteActivity={(id) => deleteActivity(selectedClientId, id)}
