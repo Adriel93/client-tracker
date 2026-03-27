@@ -48,12 +48,23 @@ export default function Sidebar({ clients, activities, pendingItems, selectedCli
               style={{
                 width: 32, height: 32, borderRadius: 'var(--radius-sm)',
                 background: 'var(--bg3)', border: '1px solid var(--border)',
-                color: 'var(--text3)', fontSize: '0.8rem', display: 'flex',
+                color: 'var(--text3)', fontSize: '1rem', display: 'flex',
                 alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'var(--warn-bg)';
+                e.target.style.color = 'var(--warn)';
+                e.target.style.borderColor = 'var(--warn)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'var(--bg3)';
+                e.target.style.color = 'var(--text3)';
+                e.target.style.borderColor = 'var(--border)';
               }}
             >
-              ↗
+              ×
             </button>
           </div>
         </div>

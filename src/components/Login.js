@@ -21,23 +21,37 @@ const Login = ({ onLogin }) => {
 
   return (
     <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: '100vh',
       backgroundColor: 'var(--bg)',
       color: 'var(--text1)',
       padding: '20px',
+      zIndex: 1000,
     }}>
       <div style={{
         backgroundColor: 'var(--bg2)',
         border: '1px solid var(--border)',
-        borderRadius: '8px',
+        borderRadius: '12px',
         padding: '40px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
         width: '100%',
-        maxWidth: '400px',
+        maxWidth: '420px',
+        animation: 'fadeIn 0.3s ease-in-out',
       }}>
+        <style>
+          {`
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(-20px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}
+        </style>
         <h2 style={{
           textAlign: 'center',
           marginBottom: '30px',
