@@ -6,9 +6,9 @@ Una aplicación moderna y elegante para gestionar actividades, tareas pendientes
 - `screenshots/screenshot-1.png`: Área de trabajo principal con cliente seleccionado.
 - `screenshots/screenshot-2.png`: Pantalla de login centrada y estilo modal.
 
-![Client Tracker Workspace](screenshots/screenshot-1.png)
+![Client Tracker Workspace](./screenshots/screenshot-1.png)
 
-![Client Tracker Login](screenshots/screenshot-2.png)
+![Client Tracker Login](./screenshots/screenshot-2.png)
 
 ## ✨ Características Principales
 
