@@ -1,8 +1,14 @@
 # 📋 Client Tracker
 
-Una aplicación moderna y elegante para gestionar actividades, tareas pendientes y proyectos de clientes. Desarrollada con React y SQLite para una experiencia fluida y datos persistentes localmente.
+Una aplicación moderna y elegante para gestionar actividades, tareas pendientes y proyectos de clientes. Desarrollada con React y PostgreSQL / Supabase (autenticación opcional local) para una experiencia fluida y datos persistentes en la nube.
 
-![Client Tracker Preview](screenshots/screenshot-1.png)
+## 🖼️ Capturas de pantalla
+- `screenshots/screenshot-1.png`: Área de trabajo principal con cliente seleccionado.
+- `screenshots/screenshot-2.png`: Pantalla de login centrada y estilo modal.
+
+![Client Tracker Workspace](screenshots/screenshot-1.png)
+
+![Client Tracker Login](screenshots/screenshot-2.png)
 
 ## ✨ Características Principales
 
