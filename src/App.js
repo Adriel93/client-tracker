@@ -47,7 +47,9 @@ function makeSyncPayload(currentData) {
 export default function App() {
   const [data, setData] = useState(defaultData);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('clientTrackerAuth') === 'true';
+  });
 
   useEffect(() => {
     async function loadData() {
@@ -255,10 +257,12 @@ export default function App() {
 
   const handleLogin = () => {
     setIsAuthenticated(true);
+    localStorage.setItem('clientTrackerAuth', 'true');
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    localStorage.removeItem('clientTrackerAuth');
   };
 
   if (!isAuthenticated) {
