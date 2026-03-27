@@ -38,13 +38,32 @@ Una aplicación moderna y elegante para gestionar actividades, tareas pendientes
 
 ### Backend
 - **Node.js + Express** - API REST ligera y eficiente
-- **SQLite** - Base de datos local, no requiere configuración
+- **PostgreSQL** - Base de datos robusta via Supabase
 - **Persistencia automática** - Sincronización en tiempo real
 
 ### Desarrollo
 - **Create React App** - Configuración optimizada
 - **ESLint** - Código limpio y consistente
 - **Git** - Control de versiones profesional
+
+## 🔐 Autenticación
+
+La aplicación incluye un sistema de autenticación básico para proteger el acceso.
+
+### Configuración
+1. Copia el archivo `.env.example` a `.env.local`
+2. Configura las variables de autenticación:
+   ```env
+   REACT_APP_AUTH_EMAIL=tu_email@gmail.com
+   REACT_APP_AUTH_PASSWORD=tu_contraseña_segura
+   ```
+3. Reinicia la aplicación
+
+### Credenciales por Defecto
+- **Email**: admin@example.com
+- **Contraseña**: 123456
+
+**Nota**: Cambia las credenciales por defecto por unas seguras antes de usar en producción.
 
 ## 🚀 Instalación y Uso
 
@@ -61,6 +80,10 @@ cd client-tracker
 
 # Instalar dependencias
 npm install
+
+# Configurar variables de entorno
+cp .env.example .env.local
+# Edita .env.local con tus credenciales
 
 # Iniciar la aplicación completa (servidor + cliente)
 npm run dev

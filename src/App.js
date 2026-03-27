@@ -4,7 +4,6 @@ import Sidebar from './components/Sidebar';
 import ClientView from './components/ClientView';
 import AddClientModal from './components/AddClientModal';
 import Login from './components/Login';
-import { supabase } from './supabaseClient';
 
 const defaultData = {
   clients: [],
@@ -48,7 +47,7 @@ function makeSyncPayload(currentData) {
 export default function App() {
   const [data, setData] = useState(defaultData);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -71,21 +70,6 @@ export default function App() {
     }
 
     loadData();
-
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-
-    checkUser();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
   }, []);
 
   useEffect(() => {
@@ -269,12 +253,16 @@ export default function App() {
     }));
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogin = () => {
+    setIsAuthenticated(true);
   };
 
-  if (!user) {
-    return <Login onLogin={setUser} />;
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
   }
 
   return (

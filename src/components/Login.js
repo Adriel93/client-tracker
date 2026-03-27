@@ -1,24 +1,21 @@
 import React, { useState } from 'react';
-import { supabase } from '../supabaseClient';
 
 const Login = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const validEmail = process.env.REACT_APP_AUTH_EMAIL || 'admin@example.com';
+  const validPassword = process.env.REACT_APP_AUTH_PASSWORD || '123456';
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message);
+    if (email.trim() === validEmail && password === validPassword) {
+      onLogin();
     } else {
-      onLogin(data.user);
+      setError('Email o contraseña incorrectos');
     }
   };
 
