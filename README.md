@@ -2,7 +2,7 @@
 
 Una aplicación moderna y elegante para gestionar actividades, tareas pendientes y proyectos de clientes. Desarrollada con React y SQLite para una experiencia fluida y datos persistentes localmente.
 
-![Client Tracker Preview](https://via.placeholder.com/800x400/0a0a0c/9090a0?text=Client+Tracker+Preview)
+![Client Tracker Preview](screenshots/screenshot-1.png)
 
 ## ✨ Características Principales
 

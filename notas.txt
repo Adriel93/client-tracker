@@ -1,5 +1,0 @@
-LjZ16]IL02e^
-
-project-url: https://gwxaugdghuybobojrwxo.supabase.co
-Publishable Key: sb_publishable_Ejwkdk4sc0YCe20JaC3vtQ_9JhQdrxb
-Direct connection string: postgresql://postgres:[YOUR-PASSWORD]@db.gwxaugdghuybobojrwxo.supabase.co:5432/postgres
